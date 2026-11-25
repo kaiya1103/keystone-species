@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>潮間帯キーストーン種シミュレーター（修正版）</title>
+  <style>
+    :root {
+      --bg: #eef5f7;
+      --card: #ffffff;
+      --primary: #1b6ca8;
+      --accent: #e05a47;
+      --ok: #2e8b57;
+      --warn: #d9822b;
+      --text: #1f2933;
+      --muted: #52606d;
+      --border: #d9e2ec;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      background: linear-gradient(135deg, #124e78, #1b6ca8);
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.22rem;
+    }
+    header p {
+      margin: 2px 0 0;
+      font-size: 0.84rem;
+      opacity: 0.92;
+    }
+    .status-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-weight: bold;
+    }
+    .badge {
+      background: rgba(255,255,255,0.18);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+    }
+    main {
+      max-width: 1180px;
+      margin: 20px auto;
+      padding: 0 16px 32px;
+      display: grid;
+      grid-template-columns: 1.48fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+    }
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 1.05rem;
+      border-bottom: 2px solid var(--bg);
+      padding-bottom: 8px;
+    }
+    .rock-field {
+      background: linear-gradient(180deg, #9ec5ab 0%, #c7b198 48%, #7d6b5d 100%);
+      border-radius: 10px;
+      padding: 14px;
+      border: 2px solid #5c4d42;
+      transition: background 0.3s ease;
+    }
+    .rock-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .rock-label {
+      font-size: 0.78rem;
+      color: #fff;
+      background: rgba(0,0,0,0.48);
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-weight: bold;
+    }
+    .trophic-layer {
+      margin-bottom: 10px;
+      background: rgba(255,255,255,0.22);
+      border-radius: 8px;
+      padding: 8px;
+    }
+    .trophic-layer:last-child { margin-bottom: 0; }
+    .layer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.74rem;
+      font-weight: bold;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+      margin-bottom: 6px;
+    }
+    .species-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(122px, 1fr));
+      gap: 8px;
+    }
+    .sp-box {
+      background: rgba(255,255,255,0.95);
+      border-radius: 7px;
+      padding: 7px 9px;
+      border: 1px solid rgba(0,0,0,0.14);
+    }
+    .sp-box.keystone {
+      border: 2px solid #d9534f;
+      background: #fff9f9;
+    }
+    .sp-box.extinct {
+      background: rgba(235,235,235,0.78);
+      opacity: 0.65;
+    }
+    .sp-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: bold;
+      font-size: 0.88rem;
+    }
+    .sp-count {
+      font-size: 0.85rem;
+      color: var(--primary);
+    }
+    .bar-bg {
+      height: 7px;
+      background: #e4e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 5px 0 3px;
+    }
+    .bar-fill {
+      height: 100%;
+      transition: width 0.25s ease;
+    }
+    .sp-role {
+      font-size: 0.69rem;
+      color: var(--muted);
+    }
+    .meters-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+    @media (max-width: 540px) {
+      .meters-grid { grid-template-columns: 1fr; }
+    }
+    .meter-wrap {
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .meter-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.83rem;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+    .diversity-bg {
+      height: 12px;
+      background: #e4e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .diversity-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #e05a47, #d9822b, #2e8b57);
+      transition: width 0.3s ease;
+    }
+    .igai-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #2e8b57, #d9822b, #9b1c1c);
+      transition: width 0.3s ease;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 13px;
+      font-weight: bold;
+      font-size: 0.86rem;
+      transition: transform 0.08s ease, opacity 0.15s ease;
+    }
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-next {
+      background: var(--primary);
+      color: #fff;
+      flex: 1 1 170px;
+    }
+    .btn-remove-star {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-add-star {
+      background: var(--ok);
+      color: #fff;
+    }
+    .btn-wave {
+      background: var(--warn);
+      color: #fff;
+    }
+    .btn-reset {
+      background: #52606d;
+      color: #fff;
+    }
+    .log-box {
+      max-height: 250px;
+      overflow-y: auto;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.83rem;
+    }
+    .log-item {
+      padding: 5px 0;
+      border-bottom: 1px dashed #e4e7eb;
+    }
+    .log-item:last-child { border-bottom: none; }
+    .foodweb-list {
+      font-size: 0.83rem;
+      padding-left: 18px;
+      margin: 6px 0 0;
+    }
+    .foodweb-list li { margin-bottom: 5px; }
+    .banner {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      display: none;
+    }
+    .banner.show { display: block; }
+    .banner.bad { background: #fde8e8; color: #9b1c1c; border: 1px solid #f8b4b4; }
+    .banner.good { background: #def7ec; color: #03543f; border: 1px solid #84e1bc; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>🌊 潮間帯キーストーン種シミュレーター（約10㎡・全9種）</h1>
+      <p>環境変化に対応しながら「5匹前後のヒトデ」で岩場9種の生態ピラミッドを12シーズン維持しよう</p>
+    </div>
+    <div class="status-bar">
+      <div class="badge" id="turnBadge">シーズン: 1 / 12</div>
+      <div class="badge" id="richnessBadge">生息種数: 9 / 9</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>🔺 潮間帯の生態ピラミッドと個体数（約10㎡あたり）</h2>
+      <div class="rock-field" id="rockField">
+        <div class="rock-header">
+          <span class="rock-label">上位ほど個体数が少ないピラミッド構造</span>
+          <span class="rock-label" id="rockStatusLabel">状態：多様な生物が共存</span>
+        </div>
+        <div id="pyramidContainer"></div>
+      </div>
+
+      <div class="meters-grid">
+        <div class="meter-wrap">
+          <div class="meter-header">
+            <span>種多様性スコア（60未満で崩壊）</span>
+            <span id="diversityText">0</span>
+          </div>
+          <div class="diversity-bg">
+            <div class="diversity-fill" id="diversityBar" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div class="meter-wrap">
+          <div class="meter-header">
+            <span>イガイの岩場面積占有率（70%超で崩壊）</span>
+            <span id="igaiShareText">0%</span>
+          </div>
+          <div class="diversity-bg">
+            <div class="igai-fill" id="igaiShareBar" style="width: 0%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn-next" id="nextTurnBtn">▶ 次の季節へ進める</button>
+        <button class="btn-remove-star" id="removeOneStarBtn">★ ヒトデ除去（-1匹）</button>
+        <button class="btn-remove-star" id="removeTwoStarBtn">★ ヒトデ除去（-2匹）</button>
+        <button class="btn-add-star" id="addOneStarBtn">★ ヒトデ導入（+1匹）</button>
+        <button class="btn-wave" id="waveBtn">🌊 高波・嵐を起こす</button>
+        <button class="btn-reset" id="resetBtn">↺ リセット</button>
+      </div>
+
+      <div class="banner" id="resultBanner"></div>
+    </section>
+
+    <aside class="card">
+      <h2>📖 キーストーン種の観察ポイント</h2>
+      <p style="font-size:0.85rem; margin-top:0;">
+        季節ごとに<strong>水温上昇・プランクトン増減・病気</strong>などの環境変化が起きます。観察ログを見ながら調整しましょう。
+      </p>
+      <ul class="foodweb-list">
+        <li><strong>フジツボ(1,500匹)とイガイ(300匹)の違い：</strong><br>数ではフジツボが最多ですが小型です。イガイは体が大きいため、増えると岩場の面積を急速に奪います。</li>
+        <li><strong>ヒトデが減ると（3匹以下・ゼロ）：</strong><br>イガイの増殖が止まらなくなり、他種が岩場に固着・生息できなくなって排除されます。</li>
+        <li><strong>ヒトデが多すぎると（8匹以上）：</strong><br>イガイやフジツボ、巻貝類を食べ尽くし、イボニシやヒトデ自身も餌不足で激減します。</li>
+      </ul>
+
+      <h2 style="margin-top:16px;">📝 観察ログ</h2>
+      <div class="log-box" id="logBox"></div>
+    </aside>
+  </main>
+
+  <script>
+    const MAX_TURNS = 12;
+    const MIN_DIVERSITY = 60;
+    const MAX_IGAI_SHARE = 70;
+
+    const TROPHIC_LAYERS = [
+      { id: "top",      title: "【第4栄養段階】上位捕食者（キーストーン種）" },
+      { id: "mid",      title: "【第3栄養段階】下位捕食者" },
+      { id: "primary",  title: "【第2栄養段階】一次消費者（岩場スペースの競争者）" },
+      { id: "producer", title: "【第1栄養段階】生産者（食物網の基礎）" }
+    ];
+
+    const INITIAL_SPECIES = {
+      hitode:    { name: "ヒトデ",       layer: "top",      count: 5,    max: 15,   unit: "匹", areaWeight: 0,    keystone: true,  role: "イガイ・フジツボ・貝類を捕食", color: "#d9534f" },
+      ibonishi:  { name: "イボニシ",     layer: "mid",      count: 50,   max: 120,  unit: "匹", areaWeight: 0,    keystone: false, role: "フジツボ・カサガイ等を捕食",   color: "#b5835a" },
+      igai:      { name: "イガイ",       layer: "primary",  count: 300,  max: 1200, unit: "匹", areaWeight: 2.0,  keystone: false, role: "固着・大型で岩場を独占",       color: "#2c3e50" },
+      fujitsubo: { name: "フジツボ",     layer: "primary",  count: 1500, max: 3000, unit: "匹", areaWeight: 0.35, keystone: false, role: "固着・小型で高密度群生",       color: "#7f8c8d" },
+      kamenote:  { name: "カメノテ",     layer: "primary",  count: 250,  max: 600,  unit: "匹", areaWeight: 0.8,  keystone: false, role: "固着・岩の隙間に束で生息",     color: "#6c757d" },
+      hizaragai: { name: "ヒザラガイ",   layer: "primary",  count: 60,   max: 150,  unit: "匹", areaWeight: 2.2,  keystone: false, role: "移動性・紅藻を食べる",         color: "#a0522d" },
+      kasagai:   { name: "カサガイ",     layer: "primary",  count: 60,   max: 150,  unit: "匹", areaWeight: 2.0,  keystone: false, role: "移動性・紅藻を食べる",         color: "#8d6e63" },
+      kousou:    { name: "紅藻",         layer: "producer", count: 300,  max: 600,  unit: "株", areaWeight: 0.6,  keystone: false, role: "岩面に生える海藻",             color: "#c0392b" },
+      plankton:  { name: "プランクトン", layer: "producer", count: 500,  max: 1000, unit: "万個体", areaWeight: 0, keystone: false, role: "海水中の基礎生産者",           color: "#2e8b57" }
+    };
+
+    let state = {};
+
+    function cloneInitial() {
+      const sp = {};
+      for (const [k, v] of Object.entries(INITIAL_SPECIES)) {
+        sp[k] = { ...v };
+      }
+      return {
+        turn: 1,
+        gameOver: false,
+        species: sp,
+        logs: ["開始：約10㎡の岩場で、5匹のヒトデがイガイ300匹の増殖を抑えて全9種の共存を保っています。"]
+      };
+    }
+
+    function addLog(msg) {
+      state.logs.unshift(`[S${state.turn}] ${msg}`);
+      if (state.logs.length > 45) state.logs.pop();
+    }
+
+    function calcMetrics() {
+      const sp = state.species;
+      const allCounts = Object.values(sp).map(s => Math.max(0, s.count));
+      const richness = allCounts.filter(c => c > 0).length;
+
+      // 岩場スペースの競争者（一次消費者＋紅藻）の面積計算
+      const rockKeys = ["igai", "fujitsubo", "kamenote", "hizaragai", "kasagai", "kousou"];
+      const areas = rockKeys.map(k => sp[k].count * sp[k].areaWeight);
+      const totalArea = areas.reduce((a, b) => a + b, 0);
+
+      const igaiArea = sp.igai.count * sp.igai.areaWeight;
+      const igaiShare = totalArea === 0 ? 0 : Math.round((igaiArea / totalArea) * 100);
+
+      if (totalArea === 0 || richness < 9) {
+        return { score: 0, richness, igaiShare };
+      }
+
+      // 各生物群が初期バランスからどれだけ維持されているか（ニッチ均等度）
+      const nicheRatios = [
+        Math.min(1.5, sp.igai.count / 300),
+        Math.min(1.5, sp.fujitsubo.count / 1500),
+        Math.min(1.5, sp.kamenote.count / 250),
+        Math.min(1.5, sp.hizaragai.count / 60),
+        Math.min(1.5, sp.kasagai.count / 60),
+        Math.min(1.5, sp.kousou.count / 300)
+      ];
+      const sumR = nicheRatios.reduce((a, b) => a + b, 0);
+      let simpson = 0;
+      for (const r of nicheRatios) {
+        const p = r / sumR;
+        simpson += p * p;
+      }
+      const evenness = (1 - simpson) / (1 - 1 / nicheRatios.length);
+
+      // イガイ独占ペナルティ（35%を超えると急激に多様性が下がる）
+      const dominancePenalty = Math.max(0, (igaiShare - 35) * 1.4);
+
+      // 捕食者とプランクトンの健全度
+      const predatorFactor = Math.min(1, sp.hitode.count / 4) * Math.min(1, sp.ibonishi.count / 30);
+      const planktonFactor = Math.min(1, sp.plankton.count / 300);
+
+      const rawScore = (evenness * 78) + (predatorFactor * 14) + (planktonFactor * 8) - dominancePenalty;
+      const score = Math.round(Math.max(0, Math.min(100, rawScore)));
+
+      return { score, richness, igaiShare };
+    }
+
+    function triggerSeasonalEvent(sp) {
+      if (state.turn < 2) return 1.0;
+      const roll = Math.random();
+      if (roll < 0.28) {
+        addLog("🌡️ 【環境イベント】海水温が上昇！イガイの幼生が大量定着し、繁殖力が上がっています。");
+        return 1.32;
+      } else if (roll < 0.48) {
+        sp.plankton.count = Math.min(1000, sp.plankton.count + 140);
+        addLog("🌿 【環境イベント】栄養塩が流入し、プランクトンが大量発生しました！");
+        return 1.15;
+      } else if (roll < 0.65 && sp.hitode.count > 2) {
+        sp.hitode.count -= 1;
+        addLog("🦠 【環境イベント】疾病によりヒトデが1匹減少しました。イガイの増加に注意！");
+        return 1.0;
+      } else if (roll < 0.80 && sp.hitode.count < 10) {
+        sp.hitode.count += 1;
+        addLog("🌊 【環境イベント】沖合からヒトデが1匹移動してきました。");
+        return 1.0;
+      }
+      return 1.0;
+    }
+
+    function stepEcology(isWave = false) {
+      if (state.gameOver) return;
+      const sp = state.species;
+
+      const igaiEventBoost = isWave ? 1.0 : triggerSeasonalEvent(sp);
+
+      // 1. 生産者（紅藻・プランクトン）の変動
+      const algalGrazing = Math.round((sp.hizaragai.count + sp.kasagai.count) * 0.45);
+      const planktonUse = Math.round((sp.igai.count * 0.18 + sp.fujitsubo.count * 0.035 + sp.kamenote.count * 0.08));
+
+      sp.kousou.count = Math.max(0, Math.min(600, Math.round(sp.kousou.count * (isWave ? 0.92 : 1) + (350 - sp.kousou.count) * 0.25 - algalGrazing + 52)));
+      sp.plankton.count = Math.max(50, Math.min(1000, Math.round(sp.plankton.count + (580 - sp.plankton.count) * 0.35 - planktonUse + 115)));
+
+      const planktonFactor = Math.min(1.25, sp.plankton.count / 480);
+      const algalFactor = Math.min(1.25, sp.kousou.count / 280);
+
+      // 2. 一次消費者の自然増加
+      const igaiGrowth = isWave
+        ? -Math.round(sp.igai.count * 0.15)
+        : Math.round((sp.igai.count * 0.34 * (1 - sp.igai.count / 1400) + 32) * planktonFactor * igaiEventBoost);
+      sp.igai.count = Math.max(0, Math.min(1200, sp.igai.count + igaiGrowth));
+
+      const fujiGrowth = isWave
+        ? -Math.round(sp.fujitsubo.count * 0.16)
+        : Math.round((sp.fujitsubo.count * 0.22 * (1 - sp.fujitsubo.count / 3200) + 120) * planktonFactor);
+      sp.fujitsubo.count = Math.max(0, Math.min(3000, sp.fujitsubo.count + fujiGrowth));
+
+      const kameGrowth = isWave
+        ? -Math.round(sp.kamenote.count * 0.12)
+        : Math.round((285 - sp.kamenote.count) * 0.28 * planktonFactor);
+      sp.kamenote.count = Math.max(0, Math.min(600, sp.kamenote.count + kameGrowth));
+
+      const hizaGrowth = isWave
+        ? -Math.round(sp.hizaragai.count * 0.08)
+        : Math.round((72 - sp.hizaragai.count) * 0.28 * algalFactor);
+      sp.hizaragai.count = Math.max(0, Math.min(150, sp.hizaragai.count + hizaGrowth));
+
+      const kasaGrowth = isWave
+        ? -Math.round(sp.kasagai.count * 0.08)
+        : Math.round((72 - sp.kasagai.count) * 0.28 * algalFactor);
+      sp.kasagai.count = Math.max(0, Math.min(150, sp.kasagai.count + kasaGrowth));
+
+      // 3. 下位捕食者（イボニシ）による捕食（フジツボ・カサガイ等を捕食）
+      if (sp.ibonishi.count > 0) {
+        const iboIgaiTarget = Math.round(sp.ibonishi.count * 0.25);
+        const iboFujiTarget = Math.round(sp.ibonishi.count * 2.4);
+        const iboKasaTarget = Math.max(1, Math.round(sp.ibonishi.count * 0.04));
+
+        const iboIgai = Math.min(sp.igai.count, iboIgaiTarget);
+        const iboFuji = Math.min(sp.fujitsubo.count, iboFujiTarget);
+        const iboKasa = Math.min(sp.kasagai.count, iboKasaTarget);
+
+        sp.igai.count -= iboIgai;
+        sp.fujitsubo.count -= iboFuji;
+        sp.kasagai.count -= iboKasa;
+
+        const satisfaction = (iboIgai + iboFuji) / Math.max(1, iboIgaiTarget + iboFujiTarget);
+        if (satisfaction < 0.65) {
+          sp.ibonishi.count = Math.max(0, Math.round(sp.ibonishi.count * 0.65));
+        } else {
+          sp.ibonishi.count = Math.min(120, Math.max(1, sp.ibonishi.count + Math.round((50 - sp.ibonishi.count) * 0.2)));
+        }
+      }
+
+      // 4. 上位捕食者・キーストーン種（ヒトデ）による捕食（食物網全体から捕食）
+      if (sp.hitode.count > 0) {
+        const targetIgai = Math.round(sp.hitode.count * 17);
+        const targetFuji = Math.round(sp.hitode.count * 26);
+        const targetKame = Math.round(sp.hitode.count * 2.2);
+        const targetHiza = Math.max(1, Math.round(sp.hitode.count * 0.4));
+        const targetKasa = Math.max(1, Math.round(sp.hitode.count * 0.4));
+
+        const eatenIgai = Math.min(sp.igai.count, targetIgai);
+        const eatenFuji = Math.min(sp.fujitsubo.count, targetFuji);
+        const eatenKame = Math.min(sp.kamenote.count, targetKame);
+        const eatenHiza = Math.min(sp.hizaragai.count, targetHiza);
+        const eatenKasa = Math.min(sp.kasagai.count, targetKasa);
+
+        sp.igai.count -= eatenIgai;
+        sp.fujitsubo.count -= eatenFuji;
+        sp.kamenote.count -= eatenKame;
+        sp.hizaragai.count -= eatenHiza;
+        sp.kasagai.count -= eatenKasa;
+
+        // 主要な餌（イガイ・フジツボ）が不足すると他種・イボニシへの捕食圧が急上昇
+        const igaiShortage = targetIgai - eatenIgai;
+        const fujiShortage = targetFuji - eatenFuji;
+        if (igaiShortage > 0 || fujiShortage > 0) {
+          const extraDemand = Math.ceil(igaiShortage * 0.6 + fujiShortage * 0.25);
+          const extraKame = Math.min(sp.kamenote.count, Math.ceil(extraDemand * 0.4));
+          sp.kamenote.count -= extraKame;
+
+          let rem = extraDemand - extraKame;
+          const extraHiza = Math.min(sp.hizaragai.count, Math.ceil(rem * 0.35));
+          sp.hizaragai.count -= extraHiza;
+          rem -= extraHiza;
+
+          const extraKasa = Math.min(sp.kasagai.count, Math.ceil(rem * 0.45));
+          sp.kasagai.count -= extraKasa;
+          rem -= extraKasa;
+
+          const eatenIbo = Math.min(sp.ibonishi.count, Math.max(0, rem));
+          sp.ibonishi.count -= eatenIbo;
+          addLog(`⚠️ ヒトデの捕食圧が高すぎ、イガイ・フジツボが不足！他の貝類やイボニシまで食べ尽くし始めています。`);
+        }
+
+        // ヒトデの飢餓判定
+        const totalTarget = targetIgai + targetFuji;
+        const totalEaten = eatenIgai + eatenFuji;
+        if (totalEaten < totalTarget * 0.6) {
+          sp.hitode.count = Math.max(0, sp.hitode.count - 2);
+          addLog(`💀 餌を食べ尽くしたため、ヒトデも飢餓で減少しました！`);
+        }
+      }
+
+      // 5. イガイの岩場面積独占による競争排除
+      const rockKeys = ["igai", "fujitsubo", "kamenote", "hizaragai", "kasagai", "kousou"];
+      const totalArea = Math.max(1, rockKeys.reduce((sum, k) => sum + sp[k].count * sp[k].areaWeight, 0));
+      const currentIgaiShare = (sp.igai.count * sp.igai.areaWeight) / totalArea;
+
+      if (currentIgaiShare > 0.38) {
+        const exclusion = Math.min(0.85, (currentIgaiShare - 0.38) * 2.0);
+        sp.fujitsubo.count = Math.max(0, Math.round(sp.fujitsubo.count * (1 - exclusion)));
+        sp.kamenote.count  = Math.max(0, Math.round(sp.kamenote.count  * (1 - exclusion)));
+        sp.hizaragai.count = Math.max(0, Math.round(sp.hizaragai.count * (1 - exclusion * 0.95)));
+        sp.kasagai.count   = Math.max(0, Math.round(sp.kasagai.count   * (1 - exclusion * 0.95)));
+        sp.kousou.count    = Math.max(0, Math.round(sp.kousou.count    * (1 - exclusion * 0.85)));
+        sp.ibonishi.count  = Math.max(0, Math.round(sp.ibonishi.count  * (1 - exclusion * 0.7)));
+        addLog(`🚨 イガイが岩場を覆い始め（面積占有率${Math.round(currentIgaiShare * 100)}%）、他種が排除されています！`);
+      }
+
+      if (isWave) {
+        addLog("🌊 高波が発生！岩場の固着生物が一部剥がれ、新たなスペースが空きました。");
+      }
+
+      // 6. 毎シーズンの生態系崩壊判定
+      const { score, richness, igaiShare } = calcMetrics();
+
+      if (richness < 9) {
+        const extinctNames = Object.values(sp).filter(s => s.count === 0).map(s => s.name).join("・");
+        state.gameOver = true;
+        render(true, "bad", `💥 生態系崩壊！【${extinctNames}】が岩場から姿を消し、種多様性が失われました。`);
+        return;
+      }
+
+      if (igaiShare > MAX_IGAI_SHARE) {
+        state.gameOver = true;
+        render(true, "bad", `💥 生態系崩壊！イガイの岩場面積占有率が ${igaiShare}% に達し、ほぼイガイしか見られない単調な環境に移行しました。`);
+        return;
+      }
+
+      if (score < MIN_DIVERSITY) {
+        state.gameOver = true;
+        render(true, "bad", `💥 生態系崩壊！種多様性スコアが ${score} に低下（基準: ${MIN_DIVERSITY}以上）。捕食と競争のバランスが崩れました。`);
+        return;
+      }
+
+      if (state.turn >= MAX_TURNS) {
+        state.gameOver = true;
+        render(true, "good", `🎉 クリア！全${MAX_TURNS}シーズンにわたり全9種の生態ピラミッドと多様性スコア（${score}）を維持しました！`);
+        return;
+      }
+
+      state.turn += 1;
+      render();
+    }
+
+    function changeStarfish(delta) {
+      if (state.gameOver) return;
+      const before = state.species.hitode.count;
+      const next = Math.max(0, Math.min(15, before + delta));
+      if (before === next) return;
+      state.species.hitode.count = next;
+      if (delta < 0) {
+        addLog(`★ ヒトデを除去（${before}匹 → ${next}匹）。イガイへの捕食圧が低下しました！`);
+      } else {
+        addLog(`★ ヒトデを導入（${before}匹 → ${next}匹）。捕食圧が上昇しました。`);
+      }
+      render();
+    }
+
+    function render(showBanner = false, bannerType = "", bannerMsg = "") {
+      const { score, richness, igaiShare } = calcMetrics();
+      document.getElementById("turnBadge").textContent = `シーズン: ${state.turn} / ${MAX_TURNS}`;
+      document.getElementById("richnessBadge").textContent = `生息種数: ${richness} / 9`;
+
+      document.getElementById("diversityText").textContent = `${score} / 100`;
+      document.getElementById("diversityBar").style.width = `${score}%`;
+
+      document.getElementById("igaiShareText").textContent = `${igaiShare}%`;
+      document.getElementById("igaiShareBar").style.width = `${igaiShare}%`;
+
+      const rockField = document.getElementById("rockField");
+      const statusLabel = document.getElementById("rockStatusLabel");
+      if (igaiShare > 52) {
+        rockField.style.background = "linear-gradient(180deg, #3b4252 0%, #2e3440 100%)";
+        statusLabel.textContent = "危険：イガイが岩場を覆い尽くしつつある！";
+      } else if (state.species.hitode.count >= 8) {
+        rockField.style.background = "linear-gradient(180deg, #d8c3a5 0%, #eae7dc 100%)";
+        statusLabel.textContent = "警告：ヒトデが多すぎて餌が食べ尽くされている！";
+      } else {
+        rockField.style.background = "linear-gradient(180deg, #9ec5ab 0%, #c7b198 48%, #7d6b5d 100%)";
+        statusLabel.textContent = "状態：多様な生物が共存";
+      }
+
+      const container = document.getElementById("pyramidContainer");
+      container.innerHTML = "";
+
+      for (const layer of TROPHIC_LAYERS) {
+        const members = Object.values(state.species).filter(s => s.layer === layer.id);
+        const layerDiv = document.createElement("div");
+        layerDiv.className = "trophic-layer";
+        layerDiv.innerHTML = `
+          <div class="layer-header">
+            <span>${layer.title}</span>
+          </div>
+        `;
+
+        const rowDiv = document.createElement("div");
+        rowDiv.className = "species-row";
+
+        for (const s of members) {
+          const pct = Math.min(100, Math.round((s.count / s.max) * 100));
+          const box = document.createElement("div");
+          box.className = "sp-box" + (s.keystone ? " keystone" : "") + (s.count === 0 ? " extinct" : "");
+          box.innerHTML = `
+            <div class="sp-top">
+              <span>${s.name}</span>
+              <span class="sp-count">${s.count === 0 ? "絶滅(0)" : s.count + s.unit}</span>
+            </div>
+            <div class="bar-bg">
+              <div class="bar-fill" style="width:${pct}%; background:${s.color};"></div>
+            </div>
+            <div class="sp-role">${s.role}</div>
+          `;
+          rowDiv.appendChild(box);
+        }
+        layerDiv.appendChild(rowDiv);
+        container.appendChild(layerDiv);
+      }
+
+      const logBox = document.getElementById("logBox");
+      logBox.innerHTML = state.logs.map(l => `<div class="log-item">${l}</div>`).join("");
+
+      const starCount = state.species.hitode.count;
+      document.getElementById("nextTurnBtn").disabled = state.gameOver;
+      document.getElementById("removeOneStarBtn").disabled = state.gameOver || starCount < 1;
+      document.getElementById("removeTwoStarBtn").disabled = state.gameOver || starCount < 2;
+      document.getElementById("addOneStarBtn").disabled = state.gameOver || starCount >= 15;
+      document.getElementById("waveBtn").disabled = state.gameOver;
+
+      const banner = document.getElementById("resultBanner");
+      banner.className = "banner";
+      if (showBanner) {
+        banner.classList.add("show", bannerType);
+        banner.textContent = bannerMsg;
+      }
+    }
+
+    document.getElementById("nextTurnBtn").addEventListener("click", () => stepEcology(false));
+    document.getElementById("waveBtn").addEventListener("click", () => stepEcology(true));
+    document.getElementById("removeOneStarBtn").addEventListener("click", () => changeStarfish(-1));
+    document.getElementById("removeTwoStarBtn").addEventListener("click", () => changeStarfish(-2));
+    document.getElementById("addOneStarBtn").addEventListener("click", () => changeStarfish(1));
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      state = cloneInitial();
+      render();
+    });
+
+    state = cloneInitial();
+    render();
+  </script>
+</body>
+</html>
